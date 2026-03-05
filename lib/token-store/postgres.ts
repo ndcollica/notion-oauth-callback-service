@@ -6,31 +6,12 @@ const INSTALLATIONS_TABLE = "oauth_installations";
 
 export class PostgresTokenStore implements TokenStore {
   private readonly pool: Pool;
-  private readonly schemaReady: Promise<void>;
 
   constructor(connectionString: string) {
     this.pool = new Pool({ connectionString });
-    this.schemaReady = this.ensureSchema();
-  }
-
-  private async ensureSchema(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS ${INSTALLATIONS_TABLE} (
-        key TEXT PRIMARY KEY,
-        access_token TEXT NOT NULL,
-        refresh_token TEXT,
-        token_type TEXT,
-        scope TEXT,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        metadata JSONB
-      )
-    `);
   }
 
   async saveInstallation(installation: InstallationRecord): Promise<void> {
-    await this.schemaReady;
-
     const createdAt = toDate(installation.created_at);
     const updatedAt = new Date();
 
@@ -61,8 +42,6 @@ export class PostgresTokenStore implements TokenStore {
   }
 
   async getInstallation(key: string): Promise<InstallationRecord | null> {
-    await this.schemaReady;
-
     const result = await this.pool.query<{
       key: string;
       access_token: string;
@@ -99,7 +78,6 @@ export class PostgresTokenStore implements TokenStore {
   }
 
   async revokeInstallation(key: string): Promise<void> {
-    await this.schemaReady;
     await this.pool.query(`DELETE FROM ${INSTALLATIONS_TABLE} WHERE key = $1`, [
       key,
     ]);

@@ -16,18 +16,24 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     // Keep provider error output minimal to avoid leaking sensitive details.
-    return new NextResponse("OAuth authorization failed.", { status: 400 });
+    return withClearedStateCookie(
+      new NextResponse("OAuth authorization failed.", { status: 400 })
+    );
   }
 
   const stateFromCookie = request.cookies.get(OAUTH_STATE_COOKIE_NAME)?.value;
 
   // State validation is required to prevent CSRF.
   if (!stateFromQuery || !stateFromCookie || stateFromQuery !== stateFromCookie) {
-    return new NextResponse("Invalid OAuth state.", { status: 400 });
+    return withClearedStateCookie(
+      new NextResponse("Invalid OAuth state.", { status: 400 })
+    );
   }
 
   if (!code) {
-    return new NextResponse("Missing authorization code.", { status: 400 });
+    return withClearedStateCookie(
+      new NextResponse("Missing authorization code.", { status: 400 })
+    );
   }
 
   try {
@@ -78,8 +84,23 @@ export async function GET(request: NextRequest) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
     });
-    return response;
+    return withClearedStateCookie(response);
   } catch {
-    return new NextResponse("OAuth callback failed.", { status: 500 });
+    return withClearedStateCookie(
+      new NextResponse("OAuth callback failed.", { status: 500 })
+    );
   }
+}
+
+function withClearedStateCookie(response: NextResponse): NextResponse {
+  response.cookies.set({
+    name: OAUTH_STATE_COOKIE_NAME,
+    value: "",
+    path: "/",
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
 }

@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const { Client } = pg;
@@ -11,6 +13,9 @@ const tokenUrl = `http://localhost:${mockPort}/oauth/token`;
 const installationKey = `itest-installation-${Date.now()}`;
 const expectedToken = `itest-access-token-${Date.now()}`;
 const connectionString = process.env.POSTGRES_URL;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const nextCliPath = path.resolve(__dirname, "../node_modules/next/dist/bin/next");
 
 if (!connectionString) {
   console.error("Missing POSTGRES_URL.");
@@ -86,11 +91,6 @@ async function startAppProcess({
   tokenUrl: oauthTokenUrl,
   connectionString: postgresUrl,
 }) {
-  const command = process.platform === "win32" ? "cmd.exe" : "corepack";
-  const run = (...parts) =>
-    process.platform === "win32"
-      ? [command, ["/d", "/s", "/c", parts.join(" ")]]
-      : [command, parts];
   const commonEnv = {
     ...process.env,
     OAUTH_CLIENT_ID: process.env.OAUTH_CLIENT_ID ?? "itest-client",
@@ -105,22 +105,22 @@ async function startAppProcess({
     POSTGRES_URL: postgresUrl,
   };
 
-  const [buildCommand, buildArgs] =
-    process.platform === "win32"
-      ? run("corepack", "pnpm", "exec", "next", "build")
-      : run("pnpm", "exec", "next", "build");
-  await runCommand(buildCommand, buildArgs, commonEnv, "build");
+  await runCommand(
+    process.execPath,
+    [nextCliPath, "build"],
+    commonEnv,
+    "build"
+  );
 
-  const [startCommand, startArgs] =
-    process.platform === "win32"
-      ? run("corepack", "pnpm", "exec", "next", "start", "--port", String(port))
-      : run("pnpm", "exec", "next", "start", "--port", String(port));
-
-  const child = spawn(startCommand, startArgs, {
+  const child = spawn(
+    process.execPath,
+    [nextCliPath, "start", "--port", String(port)],
+    {
     env: commonEnv,
     stdio: ["ignore", "pipe", "pipe"],
     shell: false,
-  });
+    }
+  );
 
   child.stdout.on("data", (chunk) => appendOutput(String(chunk)));
   child.stderr.on("data", (chunk) => appendOutput(String(chunk)));
@@ -231,6 +231,9 @@ async function runFlowAndAssertPersistence({
       throw new Error("Persisted installation token did not match expected value.");
     }
   } finally {
+    await client
+      .query("DELETE FROM oauth_installations WHERE key = $1", [key])
+      .catch(() => undefined);
     await client.end().catch(() => undefined);
   }
 }
