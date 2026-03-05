@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: notion_oauth
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d notion_oauth"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      OAUTH_CLIENT_ID: ci-client-id
+      OAUTH_CLIENT_SECRET: ci-client-secret
+      OAUTH_REDIRECT_URI: http://localhost:3000/api/oauth/callback
+      OAUTH_AUTHORIZATION_URL: https://example.com/oauth/authorize
+      OAUTH_TOKEN_URL: https://example.com/oauth/token
+      TOKEN_STORE_DRIVER: inmemory
+      POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/notion_oauth
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: corepack pnpm lint
+
+      - name: Postgres Check + Migrate
+        run: |
+          corepack pnpm db:check
+          corepack pnpm db:migrate
+
+      - name: Start App For Smoke Checks
+        run: |
+          corepack pnpm exec next dev --port 3000 > app.log 2>&1 &
+          for i in {1..40}; do
+            if curl -fsS http://localhost:3000/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://localhost:3000/health >/dev/null
+
+      - name: Route + Callback Smoke Checks
+        run: corepack pnpm verify:all
+
+      - name: Stop Smoke App
+        if: always()
+        run: pkill -f "next dev --port 3000" || true
+
+      - name: Callback Success Integration Check
+        run: corepack pnpm verify:callback-success

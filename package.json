@@ -1,0 +1,41 @@
+{
+  "name": "notion-oauth-callback-service",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.4.1",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "dev:db": "pnpm db:up && pnpm dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "db:status": "docker compose ps",
+    "db:logs": "docker compose logs -f postgres",
+    "db:check": "node scripts/check-postgres.mjs",
+    "db:migrate": "node scripts/migrate-postgres.mjs",
+    "verify:smoke": "node scripts/smoke-routes.mjs",
+    "verify:callback": "node scripts/smoke-callback.mjs",
+    "verify:all": "pnpm verify:smoke && pnpm verify:callback",
+    "verify:callback-success": "node scripts/integration-callback-success.mjs"
+  },
+  "dependencies": {
+    "next": "16.1.6",
+    "pg": "^8.19.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.18.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.6",
+    "typescript": "^5"
+  }
+}
