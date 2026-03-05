@@ -1,4 +1,5 @@
 import { exchangeCodeForToken } from "@/lib/oauth";
+import { deriveInstallationKey } from "@/lib/installation-key";
 import { tokenStore } from "@/lib/token-store";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -38,12 +39,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokenResponse = await exchangeCodeForToken(code);
-    const key =
-      typeof tokenResponse.installation_id === "string"
-        ? tokenResponse.installation_id
-        : typeof tokenResponse.workspace_id === "string"
-          ? tokenResponse.workspace_id
-          : `installation:${crypto.randomUUID()}`;
+    const { key, source } = deriveInstallationKey(tokenResponse);
 
     const now = new Date().toISOString();
     await tokenStore.saveInstallation({
@@ -62,6 +58,7 @@ export async function GET(request: NextRequest) {
       created_at: now,
       updated_at: now,
       metadata: {
+        key_source: source,
         // Placeholder fields for provider-specific IDs and extra token response fields.
         workspace_id:
           typeof tokenResponse.workspace_id === "string"

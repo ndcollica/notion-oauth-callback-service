@@ -6,11 +6,16 @@ import pg from "pg";
 
 const { Client } = pg;
 
-const appPort = Number(process.env.APP_PORT ?? 3300);
-const mockPort = Number(process.env.MOCK_OAUTH_PORT ?? 4300);
+const appPort = Number(
+  process.env.APP_PORT ?? String(3300 + Math.floor(Math.random() * 2000))
+);
+const mockPort = Number(
+  process.env.MOCK_OAUTH_PORT ?? String(6000 + Math.floor(Math.random() * 2000))
+);
 const baseUrl = `http://localhost:${appPort}`;
 const tokenUrl = `http://localhost:${mockPort}/oauth/token`;
 const installationKey = `itest-installation-${Date.now()}`;
+const persistedKey = `installation:${installationKey}`;
 const expectedToken = `itest-access-token-${Date.now()}`;
 const connectionString = process.env.POSTGRES_URL;
 const __filename = fileURLToPath(import.meta.url);
@@ -40,7 +45,7 @@ try {
   await runFlowAndAssertPersistence({
     baseUrl,
     connectionString,
-    installationKey,
+    persistedKey,
     expectedToken,
   });
   console.log("Callback success integration check passed.");
@@ -175,7 +180,7 @@ async function waitForHealth(url, child) {
 async function runFlowAndAssertPersistence({
   baseUrl: appBaseUrl,
   connectionString: postgresUrl,
-  installationKey: key,
+  persistedKey: key,
   expectedToken: token,
 }) {
   const startResponse = await fetch(`${appBaseUrl}/oauth/start`, {
@@ -225,12 +230,21 @@ async function runFlowAndAssertPersistence({
       [key]
     );
     if (result.rowCount !== 1) {
-      throw new Error("Expected one persisted installation record.");
+      const debugRows = await client.query(
+        "SELECT key FROM oauth_installations ORDER BY created_at DESC LIMIT 5"
+      );
+      throw new Error(
+        `Expected one persisted installation record for key "${key}". ` +
+          `Recent keys: ${debugRows.rows.map((r) => r.key).join(", ")}`
+      );
     }
     if (result.rows[0].access_token !== token) {
       throw new Error("Persisted installation token did not match expected value.");
     }
   } finally {
+    await client
+      .query("DELETE FROM oauth_installations WHERE key = $1", [installationKey])
+      .catch(() => undefined);
     await client
       .query("DELETE FROM oauth_installations WHERE key = $1", [key])
       .catch(() => undefined);

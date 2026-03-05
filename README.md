@@ -108,6 +108,7 @@ Defined in `.env.example`:
   - Reads `code`, `state`, `error`, `error_description`
   - Handles provider errors with minimal, safe messages
   - Validates callback `state` against cookie (CSRF protection)
+  - Derives installation storage key precedence: `installation:<installation_id>` -> `workspace:<workspace_id>` -> `generated:<uuid>`
   - Exchanges `code` for tokens and saves installation via `TokenStore`
   - Redirects to `/success` on completion
 
