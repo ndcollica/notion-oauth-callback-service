@@ -105,24 +105,16 @@ async function startAppProcess({
     POSTGRES_URL: postgresUrl,
   };
 
-  const [buildCommand, buildArgs] = run(
-    "corepack",
-    "pnpm",
-    "exec",
-    "next",
-    "build"
-  );
+  const [buildCommand, buildArgs] =
+    process.platform === "win32"
+      ? run("corepack", "pnpm", "exec", "next", "build")
+      : run("pnpm", "exec", "next", "build");
   await runCommand(buildCommand, buildArgs, commonEnv, "build");
 
-  const [startCommand, startArgs] = run(
-    "corepack",
-    "pnpm",
-    "exec",
-    "next",
-    "start",
-    "--port",
-    String(port)
-  );
+  const [startCommand, startArgs] =
+    process.platform === "win32"
+      ? run("corepack", "pnpm", "exec", "next", "start", "--port", String(port))
+      : run("pnpm", "exec", "next", "start", "--port", String(port));
 
   const child = spawn(startCommand, startArgs, {
     env: commonEnv,
@@ -130,7 +122,6 @@ async function startAppProcess({
     shell: false,
   });
 
-  child.stdout.on("data", () => undefined);
   child.stdout.on("data", (chunk) => appendOutput(String(chunk)));
   child.stderr.on("data", (chunk) => appendOutput(String(chunk)));
   return child;
