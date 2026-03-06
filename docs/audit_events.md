@@ -25,7 +25,12 @@ OAuth callback events:
   - `reason`: `provider_error` | `state_mismatch` | `missing_code`
 
 - `oauth.callback.failed`
-  - `reason`: `token_exchange_or_store_failure`
+  - `reason`: one of:
+    - `missing_required_provider_identifier`
+    - `token_endpoint_unreachable`
+    - `token_endpoint_rejected`
+    - `token_response_missing_access_token`
+    - `token_exchange_or_store_failure`
 
 - `oauth.callback.succeeded`
   - `key_source`: `installation_id` | `workspace_id` | `generated`

@@ -6,6 +6,7 @@ type AppConfig = {
   oauthRedirectUri: string;
   oauthAuthorizationUrl: string;
   oauthTokenUrl: string;
+  oauthInstallationKeyMode: "either" | "installation_id" | "workspace_id";
   tokenStoreDriver: "inmemory" | "postgres";
   postgresUrl?: string;
 };
@@ -43,6 +44,23 @@ function readTokenStoreDriver(): "inmemory" | "postgres" {
   );
 }
 
+function readInstallationKeyMode():
+  | "either"
+  | "installation_id"
+  | "workspace_id" {
+  const value = process.env.OAUTH_INSTALLATION_KEY_MODE?.trim() ?? "either";
+  if (
+    value === "either" ||
+    value === "installation_id" ||
+    value === "workspace_id"
+  ) {
+    return value;
+  }
+  throw new Error(
+    "Invalid OAUTH_INSTALLATION_KEY_MODE. Expected one of: either, installation_id, workspace_id."
+  );
+}
+
 const tokenStoreDriver = readTokenStoreDriver();
 const postgresUrl =
   tokenStoreDriver === "postgres"
@@ -61,6 +79,7 @@ export const env: AppConfig = {
     readRequiredEnvVar("OAUTH_AUTHORIZATION_URL")
   ),
   oauthTokenUrl: assertValidUrl("OAUTH_TOKEN_URL", readRequiredEnvVar("OAUTH_TOKEN_URL")),
+  oauthInstallationKeyMode: readInstallationKeyMode(),
   tokenStoreDriver,
   postgresUrl,
 };

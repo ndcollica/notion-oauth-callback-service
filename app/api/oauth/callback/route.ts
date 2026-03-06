@@ -1,4 +1,5 @@
 import { emitAuditEvent } from "@/lib/audit";
+import { env } from "@/lib/config";
 import { exchangeCodeForToken } from "@/lib/oauth";
 import { deriveInstallationKey } from "@/lib/installation-key";
 import { tokenStore } from "@/lib/token-store";
@@ -54,7 +55,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const tokenResponse = await exchangeCodeForToken(code);
-    const { key, source } = deriveInstallationKey(tokenResponse);
+    const { key, source } = deriveInstallationKey(tokenResponse, {
+      mode: env.oauthInstallationKeyMode,
+    });
     const keyPrefix = key.split(":", 1)[0] ?? "unknown";
 
     const now = new Date().toISOString();
@@ -94,9 +97,9 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/success", url.origin));
     return withClearedStateCookie(response);
-  } catch {
+  } catch (error) {
     emitAuditEvent("oauth.callback.failed", {
-      reason: "token_exchange_or_store_failure",
+      reason: classifyFailureReason(error),
     });
     return withClearedStateCookie(
       new NextResponse("OAuth callback failed.", { status: 500 })
@@ -115,4 +118,21 @@ function withClearedStateCookie(response: NextResponse): NextResponse {
     secure: process.env.NODE_ENV === "production",
   });
   return response;
+}
+
+function classifyFailureReason(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  if (message.includes("Token response missing required")) {
+    return "missing_required_provider_identifier";
+  }
+  if (message.includes("Token endpoint request failed")) {
+    return "token_endpoint_unreachable";
+  }
+  if (message.includes("Token exchange failed with HTTP")) {
+    return "token_endpoint_rejected";
+  }
+  if (message.includes("Token response missing access_token")) {
+    return "token_response_missing_access_token";
+  }
+  return "token_exchange_or_store_failure";
 }

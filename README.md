@@ -90,6 +90,7 @@ Defined in `.env.example`:
 - `OAUTH_REDIRECT_URI`: Callback URL for this service. Must exactly match what is registered with the provider.
 - `OAUTH_AUTHORIZATION_URL`: Provider authorization endpoint used by `/oauth/start`.
 - `OAUTH_TOKEN_URL`: Provider token endpoint used by `/api/oauth/callback`.
+- `OAUTH_INSTALLATION_KEY_MODE`: Installation key guard mode (`either`, `installation_id`, `workspace_id`). Use strict modes to require provider-specific IDs.
 - `TOKEN_STORE_DRIVER`: Token store backend selector (`inmemory` or `postgres`).
 - `POSTGRES_USER`: Local Docker Postgres username.
 - `POSTGRES_PASSWORD`: Local Docker Postgres password.
@@ -108,7 +109,10 @@ Defined in `.env.example`:
   - Reads `code`, `state`, `error`, `error_description`
   - Handles provider errors with minimal, safe messages
   - Validates callback `state` against cookie (CSRF protection)
-  - Derives installation storage key precedence: `installation:<installation_id>` -> `workspace:<workspace_id>` -> `generated:<uuid>`
+  - Derives installation key per `OAUTH_INSTALLATION_KEY_MODE`:
+    - `either` (default): `installation:<installation_id>` -> `workspace:<workspace_id>` -> `generated:<uuid>`
+    - `installation_id`: requires `installation_id`
+    - `workspace_id`: requires `workspace_id`
   - Exchanges `code` for tokens and saves installation via `TokenStore`
   - Emits structured, non-sensitive audit events for callback outcomes (no tokens or secrets logged)
   - Redirects to `/success` on completion
