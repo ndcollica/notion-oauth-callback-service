@@ -11,7 +11,7 @@
     "dev:db": "pnpm db:up && pnpm dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "node ./node_modules/eslint/bin/eslint.js .",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:status": "docker compose ps",

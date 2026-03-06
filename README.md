@@ -110,6 +110,7 @@ Defined in `.env.example`:
   - Validates callback `state` against cookie (CSRF protection)
   - Derives installation storage key precedence: `installation:<installation_id>` -> `workspace:<workspace_id>` -> `generated:<uuid>`
   - Exchanges `code` for tokens and saves installation via `TokenStore`
+  - Emits structured, non-sensitive audit events for callback outcomes (no tokens or secrets logged)
   - Redirects to `/success` on completion
 
 - `GET /success`:

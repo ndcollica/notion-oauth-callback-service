@@ -1,3 +1,4 @@
+import { emitAuditEvent } from "@/lib/audit";
 import { exchangeCodeForToken } from "@/lib/oauth";
 import { deriveInstallationKey } from "@/lib/installation-key";
 import { tokenStore } from "@/lib/token-store";
@@ -14,9 +15,17 @@ export async function GET(request: NextRequest) {
   const error = params.get("error");
   const code = params.get("code");
   const stateFromQuery = params.get("state");
+  emitAuditEvent("oauth.callback.received", {
+    has_error: Boolean(error),
+    has_code: Boolean(code),
+    has_state: Boolean(stateFromQuery),
+  });
 
   if (error) {
     // Keep provider error output minimal to avoid leaking sensitive details.
+    emitAuditEvent("oauth.callback.rejected", {
+      reason: "provider_error",
+    });
     return withClearedStateCookie(
       new NextResponse("OAuth authorization failed.", { status: 400 })
     );
@@ -26,12 +35,18 @@ export async function GET(request: NextRequest) {
 
   // State validation is required to prevent CSRF.
   if (!stateFromQuery || !stateFromCookie || stateFromQuery !== stateFromCookie) {
+    emitAuditEvent("oauth.callback.rejected", {
+      reason: "state_mismatch",
+    });
     return withClearedStateCookie(
       new NextResponse("Invalid OAuth state.", { status: 400 })
     );
   }
 
   if (!code) {
+    emitAuditEvent("oauth.callback.rejected", {
+      reason: "missing_code",
+    });
     return withClearedStateCookie(
       new NextResponse("Missing authorization code.", { status: 400 })
     );
@@ -40,6 +55,7 @@ export async function GET(request: NextRequest) {
   try {
     const tokenResponse = await exchangeCodeForToken(code);
     const { key, source } = deriveInstallationKey(tokenResponse);
+    const keyPrefix = key.split(":", 1)[0] ?? "unknown";
 
     const now = new Date().toISOString();
     await tokenStore.saveInstallation({
@@ -71,18 +87,17 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const response = NextResponse.redirect(new URL("/success", url.origin));
-    response.cookies.set({
-      name: OAUTH_STATE_COOKIE_NAME,
-      value: "",
-      path: "/",
-      maxAge: 0,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+    emitAuditEvent("oauth.callback.succeeded", {
+      key_source: source,
+      key_prefix: keyPrefix,
     });
+
+    const response = NextResponse.redirect(new URL("/success", url.origin));
     return withClearedStateCookie(response);
   } catch {
+    emitAuditEvent("oauth.callback.failed", {
+      reason: "token_exchange_or_store_failure",
+    });
     return withClearedStateCookie(
       new NextResponse("OAuth callback failed.", { status: 500 })
     );
