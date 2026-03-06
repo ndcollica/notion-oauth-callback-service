@@ -21,7 +21,8 @@
     "verify:smoke": "node scripts/smoke-routes.mjs",
     "verify:callback": "node scripts/smoke-callback.mjs",
     "verify:all": "pnpm verify:smoke && pnpm verify:callback",
-    "verify:callback-success": "node scripts/integration-callback-success.mjs"
+    "verify:callback-success": "node scripts/integration-callback-success.mjs",
+    "verify:callback-strict": "node scripts/integration-callback-strict-mode.mjs"
   },
   "dependencies": {
     "next": "16.1.6",

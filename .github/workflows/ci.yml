@@ -75,3 +75,6 @@ jobs:
 
       - name: Callback Success Integration Check
         run: corepack pnpm verify:callback-success
+
+      - name: Callback Strict-Mode Regression Check
+        run: corepack pnpm verify:callback-strict

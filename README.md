@@ -64,6 +64,8 @@ corepack pnpm verify:callback
 corepack pnpm verify:all
 # success-path callback integration (requires Postgres up + migrated):
 corepack pnpm verify:callback-success
+# strict-mode regression check (missing provider identifier should fail safely):
+corepack pnpm verify:callback-strict
 ```
 
 Default local URL: `http://localhost:3000`
@@ -117,6 +119,7 @@ Defined in `.env.example`:
   - Emits structured, non-sensitive audit events for callback outcomes (no tokens or secrets logged)
   - Redirects to `/success` on completion
   - Event schema: `docs/audit_events.md`
+  - Provider mapping contract: `docs/provider_mapping_contract.md`
 
 - `GET /success`:
   - Simple confirmation page: `Authorization complete.`
