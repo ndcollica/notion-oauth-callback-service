@@ -112,6 +112,7 @@ Defined in `.env.example`:
   - Exchanges `code` for tokens and saves installation via `TokenStore`
   - Emits structured, non-sensitive audit events for callback outcomes (no tokens or secrets logged)
   - Redirects to `/success` on completion
+  - Event schema: `docs/audit_events.md`
 
 - `GET /success`:
   - Simple confirmation page: `Authorization complete.`
