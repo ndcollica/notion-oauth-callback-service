@@ -119,6 +119,7 @@ Defined in `.env.example`:
   - Emits structured, non-sensitive audit events for callback outcomes (no tokens or secrets logged)
   - Redirects to `/success` on completion
   - Event schema: `docs/audit_events.md`
+  - Audit query + triage runbook: `docs/audit_runbook.md`
   - Provider mapping contract: `docs/provider_mapping_contract.md`
 
 - `GET /success`:
