@@ -138,6 +138,16 @@ Defined in `.env.example`:
   - HttpOnly is enabled.
   - `Secure` is enabled in production (`NODE_ENV=production`).
 
+## Auth Flow Release Evidence
+
+For PRs that modify OAuth flow behavior (`/oauth/start`, `/api/oauth/callback`, token exchange, key derivation, token storage), include evidence for:
+
+- `corepack pnpm verify:all`
+- `corepack pnpm verify:callback-success`
+- `corepack pnpm verify:callback-strict`
+
+Also include a brief risk note and rollback note in the PR description.
+
 ## Postgres Later Plan
 
 - Add robust multi-install support across workspace/installation identities.
